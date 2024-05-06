@@ -10,18 +10,19 @@ trait HasThreshold
      * Get the threshold for the given value.
      * @param  class-string  $recorder
      */
-    public function threshold(string $value, string $recorder): int
+    public function threshold(string $value, string $recorder = self::class): int
     {
-        $thresholdConfig = Config::get('pulse.recorders.'.$recorder.'.threshold');
-        if (!is_array($thresholdConfig)) {
-            return $thresholdConfig;
+        $config = Config::get('pulse.recorders.'.$recorder.'.threshold');
+
+        if (! is_array($config)) {
+            return $config;
         }
 
         // @phpstan-ignore argument.templateType, argument.templateType
-        $custom = collect($thresholdConfig)
+        $custom = collect($config)
             ->except(['default'])
             ->first(fn ($threshold, string $pattern) => !! preg_match($pattern, $value));
 
-        return $custom ?? $thresholdConfig['default'];
+        return $custom ?? $config['default'];
     }
 }

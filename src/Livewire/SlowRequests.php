@@ -5,6 +5,7 @@ namespace Laravel\Pulse\Livewire;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\View;
+use Laravel\Pulse\Recorders\Concerns\Thresholds;
 use Laravel\Pulse\Recorders\SlowRequests as SlowRequestsRecorder;
 use Livewire\Attributes\Lazy;
 use Livewire\Attributes\Url;
@@ -15,7 +16,7 @@ use Livewire\Attributes\Url;
 #[Lazy]
 class SlowRequests extends Card
 {
-    use Concerns\HasThreshold;
+    use Thresholds;
 
     /**
      * Ordering.
@@ -47,6 +48,7 @@ class SlowRequests extends Card
                     'action' => $action,
                     'count' => $row->count,
                     'slowest' => $row->max,
+                    'threshold' => $this->threshold($uri, SlowRequestsRecorder::class),
                 ];
             }),
             $this->orderBy,
@@ -57,16 +59,9 @@ class SlowRequests extends Card
             'runAt' => $runAt,
             'slowRequests' => $slowRequests,
             'config' => [
+                'threshold' => Config::get('pulse.recorders.'.SlowRequestsRecorder::class.'.threshold'),
                 'sample_rate' => Config::get('pulse.recorders.'.SlowRequestsRecorder::class.'.sample_rate'),
             ],
         ]);
-    }
-
-    /**
-     * Get the recorder class.
-     */
-    protected function thresholdValue(string $value): int
-    {
-        return $this->threshold($value, SlowRequestsRecorder::class);
     }
 }

@@ -2,6 +2,8 @@
 
 namespace Laravel\Pulse\Recorders\Concerns;
 
+use Illuminate\Support\Facades\Config;
+
 trait Thresholds
 {
     /**
@@ -12,23 +14,25 @@ trait Thresholds
         return $duration < $this->threshold($value);
     }
 
-
     /**
      * Get the threshold for the given value.
      */
-    protected function threshold(string $value): int
+    protected function threshold(string $value, string $recorder = null): int
     {
-        $thresholdConfig = $this->config->get('pulse.recorders.'.static::class.'.threshold');
+        $recorder ??= static::class;
 
-        if (! is_array($thresholdConfig)) {
-            return $thresholdConfig;
+        $config = Config::get("pulse.recorders.{$recorder}.threshold");
+
+        if (! is_array($config)) {
+            return $config;
         }
 
         // @phpstan-ignore argument.templateType, argument.templateType
-        $custom = collect($thresholdConfig)
+        $custom = collect($config)
             ->except(['default'])
-            ->first(fn ($threshold, string $pattern) => !! preg_match($pattern, $value));
+            ->first(fn ($threshold, $pattern) => preg_match($pattern, $value));
 
-        return $custom ?? $thresholdConfig['default'] ?? 1_000;
+        // TODO: cannot have a `default` named route, job, etc., here
+        return $custom ?? $config['default'] ?? 1_000;
     }
 }
