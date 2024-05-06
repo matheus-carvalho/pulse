@@ -170,11 +170,7 @@ return [
         Recorders\SlowJobs::class => [
             'enabled' => env('PULSE_SLOW_JOBS_ENABLED', true),
             'sample_rate' => env('PULSE_SLOW_JOBS_SAMPLE_RATE', 1),
-            'threshold' => [
-                'default' => env('PULSE_SLOW_JOBS_THRESHOLD', 1000),
-                // '/^Package\\\\Jobs\\\\Reports\\\\SlowestReport/' => 2000,
-                // '/^Package\\\\Jobs\\\\Reports\\\\.*$/' => 1500,
-            ],
+            'threshold' => env('PULSE_SLOW_JOBS_THRESHOLD', 1000),
             'ignore' => [
                 // '/^Package\\\\Jobs\\\\/',
             ],
