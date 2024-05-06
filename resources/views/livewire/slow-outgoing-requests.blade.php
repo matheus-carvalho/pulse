@@ -5,7 +5,7 @@
     <x-pulse::card-header
         name="Slow Outgoing Requests"
         title="Time: {{ number_format($time) }}ms; Run at: {{ $runAt }};"
-        details="past {{ $this->periodForHumans() }}"
+        details="{{ is_array($config['threshold']) ? '' : $config['threshold'].'ms threshold, ' }}past {{ $this->periodForHumans() }}"
     >
         <x-slot:icon>
             <x-pulse::icons.cloud-arrow-up />
@@ -71,9 +71,11 @@
                                         {{ $request->uri }}
                                     </code>
                                 </div>
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    {{ $this->thresholdValue($request->uri) }}ms threshold
-                                </p>
+                                @if (is_array($config['threshold']))
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        {{ $request->threshold }}ms threshold
+                                    </p>
+                                @endif
                             </x-pulse::td>
                             <x-pulse::td numeric class="text-gray-700 dark:text-gray-300 font-bold">
                                 @if ($config['sample_rate'] < 1)
