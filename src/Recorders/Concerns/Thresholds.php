@@ -17,7 +17,7 @@ trait Thresholds
     /**
      * Get the threshold for the given value.
      */
-    protected function threshold(string $value, string $recorder = null): int
+    protected function threshold(string $value, ?string $recorder = null): int
     {
         $recorder ??= static::class;
 
