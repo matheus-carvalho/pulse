@@ -4,11 +4,14 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 use Laravel\Pulse\Facades\Pulse;
 use Laravel\Pulse\Recorders\SlowOutgoingRequests;
 
+use function Pest\Laravel\freezeTime;
+
 it('ingests slow outgoing http requests', function () {
-    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', 0);
     Carbon::setTestNow('2000-01-02 03:04:05');
     Http::fake(fn () => Http::response('ok'));
 
@@ -52,7 +55,7 @@ it('ignores fast requests', function () {
 });
 
 it('captures failed requests', function () {
-    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', 0);
     Carbon::setTestNow('2000-01-02 03:04:05');
     Http::fake(['https://laravel.com' => Http::response('error', status: 500)]);
 
@@ -70,7 +73,7 @@ it('captures failed requests', function () {
 });
 
 it('stores the original URI by default', function () {
-    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', 0);
     Carbon::setTestNow('2000-01-02 03:04:05');
     Http::fake(['https://laravel.com*' => Http::response('ok')]);
 
@@ -88,7 +91,7 @@ it('stores the original URI by default', function () {
 });
 
 it('can normalize URI', function () {
-    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', 0);
     Carbon::setTestNow('2000-01-02 03:04:05');
     Http::fake(fn () => Http::response('ok'));
 
@@ -109,7 +112,7 @@ it('can normalize URI', function () {
 });
 
 it('can use back references in normalized URI', function () {
-    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', 0);
     Carbon::setTestNow('2000-01-02 03:04:05');
     Http::fake(fn () => Http::response('ok'));
 
@@ -130,7 +133,7 @@ it('can use back references in normalized URI', function () {
 });
 
 it('can provide regex flags in normalization key', function () {
-    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', 0);
     Carbon::setTestNow('2000-01-02 03:04:05');
     Http::fake(fn () => Http::response('ok'));
 
@@ -152,7 +155,7 @@ it('can provide regex flags in normalization key', function () {
 });
 
 it('can ignore outgoing requests', function () {
-    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', 0);
     Http::fake(fn () => Http::response('ok'));
     Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.ignore', [
         '#^http://127\.0\.0\.1:13714#', // Inertia SSR
@@ -164,7 +167,7 @@ it('can ignore outgoing requests', function () {
 });
 
 it('can sample', function () {
-    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', 0);
     Http::fake(fn () => Http::response('ok'));
     Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.sample_rate', 0.1);
 
@@ -183,7 +186,7 @@ it('can sample', function () {
 });
 
 it('can sample at zero', function () {
-    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', 0);
     Http::fake(fn () => Http::response('ok'));
     Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.sample_rate', 0);
 
@@ -202,7 +205,7 @@ it('can sample at zero', function () {
 });
 
 it('can sample at one', function () {
-    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', 0);
     Http::fake(fn () => Http::response('ok'));
     Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.sample_rate', 1);
 
@@ -218,4 +221,50 @@ it('can sample at one', function () {
     Http::get('http://example.com');
 
     expect(Pulse::ingest())->toBe(10);
+});
+
+it('captures requests over the threshold', function () {
+    freezeTime();
+    Sleep::fake(syncWithCarbon: true);
+    Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', [
+        '#one-second-threshold#' => 1_000,
+        '#two-second-threshold#' => 2_000,
+    ]);
+    $sleepSeconds = null;
+    Http::fake([
+        'one-second-threshold' => function () use (&$sleepSeconds) {
+            Sleep::for($sleepSeconds)->seconds();
+
+            return Http::response('ok');
+        },
+        'two-second-threshold' => function () use (&$sleepSeconds) {
+            Sleep::for($sleepSeconds)->seconds();
+
+            return Http::response('ok');
+        },
+    ]);
+
+    $sleepSeconds = 1;
+    Http::get('one-second-threshold')->throw();
+    Http::get('two-second-threshold')->throw();
+    Pulse::ingest();
+
+    $entries = Pulse::ignore(fn () => DB::table('pulse_entries')->get());
+    expect($entries)->toHaveCount(1);
+    expect($entries[0]->key)->toBe('["GET","one-second-threshold"]');
+    expect($entries[0]->value)->toBe(1000);
+
+    Pulse::purge();
+
+    $sleepSeconds = 2;
+    Http::get('one-second-threshold')->throw();
+    Http::get('two-second-threshold')->throw();
+    Pulse::ingest();
+
+    $entries = Pulse::ignore(fn () => DB::table('pulse_entries')->orderBy('key')->get());
+    expect($entries)->toHaveCount(2);
+    expect($entries[0]->key)->toBe('["GET","one-second-threshold"]');
+    expect($entries[0]->value)->toBe(2_000);
+    expect($entries[1]->key)->toBe('["GET","two-second-threshold"]');
+    expect($entries[1]->value)->toBe(2_000);
 });
