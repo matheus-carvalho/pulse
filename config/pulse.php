@@ -179,11 +179,7 @@ return [
         Recorders\SlowOutgoingRequests::class => [
             'enabled' => env('PULSE_SLOW_OUTGOING_REQUESTS_ENABLED', true),
             'sample_rate' => env('PULSE_SLOW_OUTGOING_REQUESTS_SAMPLE_RATE', 1),
-            'threshold' => [
-                'default' => env('PULSE_SLOW_OUTGOING_REQUESTS_THRESHOLD', 1000),
-                // '#^https://api\.github\.com/repos/.*$#' => 1500,
-                // '#^https://api\.github\.com/something-slow$#' => 2000,
-            ],
+            'threshold' => env('PULSE_SLOW_OUTGOING_REQUESTS_THRESHOLD', 1000),
             'ignore' => [
                 // '#^http://127\.0\.0\.1:13714#', // Inertia SSR...
             ],
