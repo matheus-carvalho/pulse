@@ -7,13 +7,14 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use Laravel\Pulse\Facades\Pulse;
 use Laravel\Pulse\Recorders\SlowJobs;
 
 it('records slow jobs', function () {
     Config::set('queue.default', 'database');
-    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold.default', 100);
+    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold', 100);
     Str::createUuidsUsingSequence(['e2cb5fa7-6c2e-4bc5-82c9-45e79c3e8fdd']);
 
     /*
@@ -60,8 +61,8 @@ it('records slow jobs', function () {
 
 it('skips jobs under the threshold', function () {
     Config::set('queue.default', 'database');
-    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold.default', 200);
     Str::createUuidsUsingSequence(['e2cb5fa7-6c2e-4bc5-82c9-45e79c3e8fdd']);
+    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold', 200);
 
     /*
      * Dispatch the job.
@@ -85,9 +86,40 @@ it('skips jobs under the threshold', function () {
     expect(Pulse::ignore(fn () => DB::table('pulse_aggregates')->where('type', 'slow_job')->get()))->toHaveCount(0);
 });
 
+it('can configure threshold per job', function () {
+    Carbon::setTestNow('2000-01-02 03:04:05');
+    Config::set('queue.default', 'database');
+    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold', [
+        '#MySlowJob#' => 1_000,
+        '#AnotherSlowJob#' => 2_000,
+    ]);
+
+    Bus::dispatchToQueue(new MySlowJob(1_000));
+    Bus::dispatchToQueue(new AnotherSlowJob(1_000));
+    Artisan::call('queue:work', ['--max-jobs' => 2, '--stop-when-empty' => true, '--sleep' => 0]);
+
+    $entries = Pulse::ignore(fn () => DB::table('pulse_entries')->where('type', 'slow_job')->get());
+    expect($entries)->toHaveCount(1);
+    expect($entries[0]->key)->toBe('MySlowJob');
+    expect($entries[0]->value)->toBe(1_000);
+
+    Pulse::purge();
+
+    Bus::dispatchToQueue(new MySlowJob(2_000));
+    Bus::dispatchToQueue(new AnotherSlowJob(2_000));
+    Artisan::call('queue:work', ['--max-jobs' => 2, '--stop-when-empty' => true, '--sleep' => 0]);
+
+    $entries = Pulse::ignore(fn () => DB::table('pulse_entries')->where('type', 'slow_job')->get());
+    expect($entries)->toHaveCount(2);
+    expect($entries[0]->key)->toBe('MySlowJob');
+    expect($entries[0]->value)->toBe(2_000);
+    expect($entries[1]->key)->toBe('AnotherSlowJob');
+    expect($entries[1]->value)->toBe(2_000);
+});
+
 it('can ignore jobs', function () {
     Config::set('queue.default', 'database');
-    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold', 0);
     Config::set('pulse.recorders.'.SlowJobs::class.'.ignore', [
         '/My/',
     ]);
@@ -115,7 +147,7 @@ it('can ignore jobs', function () {
 
 it('can sample', function () {
     Config::set('queue.default', 'database');
-    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold', 0);
     Config::set('pulse.recorders.'.SlowJobs::class.'.sample_rate', 0.1);
 
     /*
@@ -150,7 +182,7 @@ it('can sample', function () {
 
 it('can sample at zero', function () {
     Config::set('queue.default', 'database');
-    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold', 0);
     Config::set('pulse.recorders.'.SlowJobs::class.'.sample_rate', 0);
 
     /*
@@ -185,7 +217,7 @@ it('can sample at zero', function () {
 
 it('can sample at one', function () {
     Config::set('queue.default', 'database');
-    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowJobs::class.'.threshold', 0);
     Config::set('pulse.recorders.'.SlowJobs::class.'.sample_rate', 1);
 
     /*
@@ -220,8 +252,18 @@ it('can sample at one', function () {
 
 class MySlowJob implements ShouldQueue
 {
+    public function __construct(public $duration = 100)
+    {
+        //
+    }
+
     public function handle()
     {
-        Carbon::setTestNow(Carbon::now()->addMilliseconds(100));
+        Carbon::setTestNow(Carbon::now()->addMilliseconds($this->duration));
     }
+}
+
+class AnotherSlowJob extends MySlowJob
+{
+    //
 }
