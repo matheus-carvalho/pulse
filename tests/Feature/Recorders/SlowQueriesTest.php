@@ -8,7 +8,7 @@ use Laravel\Pulse\Facades\Pulse;
 use Laravel\Pulse\Recorders\SlowQueries;
 
 it('ingests queries', function () {
-    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold', 0);
     Carbon::setTestNow('2000-01-02 03:04:05');
     prependListener(QueryExecuted::class, function (QueryExecuted $event) {
         $event->time = 5000;
@@ -97,7 +97,7 @@ it('can disable capturing the location', function () {
 });
 
 it('does not ingest queries under the slow query threshold', function () {
-    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold.default', 5000);
+    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold', 5000);
     prependListener(QueryExecuted::class, function (QueryExecuted $event) {
         $event->time = 4999;
     });
@@ -108,8 +108,47 @@ it('does not ingest queries under the slow query threshold', function () {
     Pulse::ignore(fn () => expect(DB::table('pulse_entries')->count())->toBe(0));
 });
 
+it('can configure thresholds per query', function () {
+    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold', [
+        '#one_second_threshold#' => 1_000,
+        '#two_second_threshold#' => 2_000,
+    ]);
+    $queryDuration = null;
+    prependListener(QueryExecuted::class, function (QueryExecuted $event) use (&$queryDuration) {
+        $event->time = $queryDuration;
+    });
+
+    $queryDuration = 1_000;
+    DB::pretend(function () {
+        DB::table('one_second_threshold')->count();
+        DB::table('two_second_threshold')->count();
+    });
+    Pulse::ingest();
+
+    $entries = Pulse::ignore(fn () => DB::table('pulse_entries')->get());
+    expect($entries)->toHaveCount(1);
+    expect($entries[0]->key)->toStartWith('["select count(*) as aggregate from \\"one_second_threshold\\"');
+    expect($entries[0]->value)->toBe(1_000);
+
+    Pulse::purge();
+
+    $queryDuration = 2_000;
+    DB::pretend(function () {
+        DB::table('one_second_threshold')->count();
+        DB::table('two_second_threshold')->count();
+    });
+    Pulse::ingest();
+
+    $entries = Pulse::ignore(fn () => DB::table('pulse_entries')->orderBy('key')->get());
+    expect($entries)->toHaveCount(2);
+    expect($entries[0]->key)->toStartWith('["select count(*) as aggregate from \\"one_second_threshold\\"');
+    expect($entries[0]->value)->toBe(2_000);
+    expect($entries[1]->key)->toStartWith('["select count(*) as aggregate from \\"two_second_threshold\\"');
+    expect($entries[1]->value)->toBe(2_000);
+});
+
 it('ingests queries equal to the slow query threshold', function () {
-    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold.default', 5000);
+    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold', 5000);
     prependListener(QueryExecuted::class, function (QueryExecuted $event) {
         $event->time = 5000;
     });
@@ -121,7 +160,7 @@ it('ingests queries equal to the slow query threshold', function () {
 });
 
 it('ingests queries over the slow query threshold', function () {
-    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold.default', 5000);
+    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold', 5000);
     prependListener(QueryExecuted::class, function (QueryExecuted $event) {
         $event->time = 5001;
     });
@@ -133,7 +172,7 @@ it('ingests queries over the slow query threshold', function () {
 });
 
 it('can ignore queries', function () {
-    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold', 0);
     Config::set('pulse.recorders.'.SlowQueries::class.'.ignore', [
         '/(["`])pulse_[\w]+?\1/', // Pulse tables
     ]);
@@ -142,7 +181,7 @@ it('can ignore queries', function () {
 });
 
 it('can sample', function () {
-    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold', 0);
     Config::set('pulse.recorders.'.SlowQueries::class.'.sample_rate', 0.1);
 
     DB::table('users')->count();
@@ -160,7 +199,7 @@ it('can sample', function () {
 });
 
 it('can sample at zero', function () {
-    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold', 0);
     Config::set('pulse.recorders.'.SlowQueries::class.'.sample_rate', 0);
 
     DB::table('users')->count();
@@ -178,7 +217,7 @@ it('can sample at zero', function () {
 });
 
 it('can sample at one', function () {
-    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold.default', 0);
+    Config::set('pulse.recorders.'.SlowQueries::class.'.threshold', 0);
     Config::set('pulse.recorders.'.SlowQueries::class.'.sample_rate', 1);
 
     DB::table('users')->count();
