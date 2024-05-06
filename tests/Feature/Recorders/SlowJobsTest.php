@@ -61,8 +61,8 @@ it('records slow jobs', function () {
 
 it('skips jobs under the threshold', function () {
     Config::set('queue.default', 'database');
-    Str::createUuidsUsingSequence(['e2cb5fa7-6c2e-4bc5-82c9-45e79c3e8fdd']);
     Config::set('pulse.recorders.'.SlowJobs::class.'.threshold', 200);
+    Str::createUuidsUsingSequence(['e2cb5fa7-6c2e-4bc5-82c9-45e79c3e8fdd']);
 
     /*
      * Dispatch the job.
