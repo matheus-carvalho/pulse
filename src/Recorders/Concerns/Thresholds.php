@@ -32,7 +32,6 @@ trait Thresholds
             ->except(['default'])
             ->first(fn ($threshold, $pattern) => preg_match($pattern, $value));
 
-        // TODO: cannot have a `default` named route, job, etc., here
         return $custom ?? $config['default'] ?? 1_000;
     }
 }
