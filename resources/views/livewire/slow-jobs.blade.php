@@ -2,7 +2,7 @@
     <x-pulse::card-header
         name="Slow Jobs"
         title="Time: {{ number_format($time, 0) }}ms; Run at: {{ $runAt }};"
-        details="past {{ $this->periodForHumans() }}"
+        details="{{ is_array($config['threshold']) ? '' : $config['threshold'].'ms threshold, ' }}past {{ $this->periodForHumans() }}"
     >
         <x-slot:icon>
             <x-pulse::icons.command-line />
@@ -45,9 +45,11 @@
                                 <code class="block text-xs text-gray-900 dark:text-gray-100 truncate" title="{{ $job->job }}">
                                     {{ $job->job }}
                                 </code>
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    {{ $this->thresholdValue($job->job) }}ms threshold
-                                </p>
+                                @if (is_array($config['threshold']))
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        {{ $job->threshold }}ms threshold
+                                    </p>
+                                @endif
                             </x-pulse::td>
                             <x-pulse::td numeric class="text-gray-700 dark:text-gray-300 font-bold">
                                 @if ($config['sample_rate'] < 1)
