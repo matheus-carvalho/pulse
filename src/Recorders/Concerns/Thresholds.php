@@ -19,7 +19,8 @@ trait Thresholds
     protected function threshold(string $value): int
     {
         $thresholdConfig = $this->config->get('pulse.recorders.'.static::class.'.threshold');
-        if (!is_array($thresholdConfig)) {
+
+        if (! is_array($thresholdConfig)) {
             return $thresholdConfig;
         }
 
@@ -28,6 +29,6 @@ trait Thresholds
             ->except(['default'])
             ->first(fn ($threshold, string $pattern) => !! preg_match($pattern, $value));
 
-        return $custom ?? $thresholdConfig['default'];
+        return $custom ?? $thresholdConfig['default'] ?? 1_000;
     }
 }
