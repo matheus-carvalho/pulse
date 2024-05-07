@@ -36,7 +36,7 @@ it('renders slow requests', function () {
 
     Livewire::test(SlowRequests::class, ['lazy' => false])
         ->assertViewHas('slowRequests', collect([
-            (object) ['method' => 'GET', 'uri' => '/users', 'action' => 'FooController@index', 'count' => 4, 'slowest' => 2468],
-            (object) ['method' => 'GET', 'uri' => '/users/{user}', 'action' => 'Closure', 'count' => 2, 'slowest' => 1234],
+            (object) ['method' => 'GET', 'uri' => '/users', 'action' => 'FooController@index', 'count' => 4, 'slowest' => 2468, 'threshold' => 1_000],
+            (object) ['method' => 'GET', 'uri' => '/users/{user}', 'action' => 'Closure', 'count' => 2, 'slowest' => 1234, 'threshold' => 1_000],
         ]));
 });

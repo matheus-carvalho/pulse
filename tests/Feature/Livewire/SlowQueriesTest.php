@@ -36,8 +36,8 @@ it('renders slow queries', function () {
 
     Livewire::test(SlowQueries::class, ['lazy' => false])
         ->assertViewHas('slowQueries', collect([
-            (object) ['sql' => 'select * from `users`', 'location' => 'app/Foo.php:123', 'count' => 4, 'slowest' => 2468],
-            (object) ['sql' => 'select * from `users` where `id` = ?', 'location' => 'app/Bar.php:456', 'count' => 2, 'slowest' => 1234],
+            (object) ['sql' => 'select * from `users`', 'location' => 'app/Foo.php:123', 'count' => 4, 'slowest' => 2468, 'threshold' => 1_000],
+            (object) ['sql' => 'select * from `users` where `id` = ?', 'location' => 'app/Bar.php:456', 'count' => 2, 'slowest' => 1234, 'threshold' => 1_000],
         ]));
 });
 

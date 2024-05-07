@@ -33,7 +33,7 @@ it('renders slow jobs', function () {
 
     Livewire::test(SlowJobs::class, ['lazy' => false])
         ->assertViewHas('slowJobs', collect([
-            (object) ['job' => 'App\Jobs\MyJob', 'count' => 4, 'slowest' => 2468],
-            (object) ['job' => 'App\Jobs\MyOtherJob', 'count' => 2, 'slowest' => 1234],
+            (object) ['job' => 'App\Jobs\MyJob', 'count' => 4, 'slowest' => 2468, 'threshold' => 1_000],
+            (object) ['job' => 'App\Jobs\MyOtherJob', 'count' => 2, 'slowest' => 1234, 'threshold' => 1_000],
         ]));
 });

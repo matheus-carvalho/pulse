@@ -33,7 +33,7 @@ it('renders slow outgoing requests', function () {
 
     Livewire::test(SlowOutgoingRequests::class, ['lazy' => false])
         ->assertViewHas('slowOutgoingRequests', collect([
-            (object) ['method' => 'GET', 'uri' => 'http://example.com', 'count' => 4, 'slowest' => 2468],
-            (object) ['method' => 'GET', 'uri' => 'http://example.org', 'count' => 2, 'slowest' => 1234],
+            (object) ['method' => 'GET', 'uri' => 'http://example.com', 'count' => 4, 'slowest' => 2468, 'threshold' => 1_000],
+            (object) ['method' => 'GET', 'uri' => 'http://example.org', 'count' => 2, 'slowest' => 1234, 'threshold' => 1_000],
         ]));
 });

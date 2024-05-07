@@ -30,7 +30,7 @@ trait Thresholds
         // @phpstan-ignore argument.templateType, argument.templateType
         $custom = collect($config)
             ->except(['default'])
-            ->first(fn ($threshold, $pattern) => preg_match($pattern, $value));
+            ->first(fn ($threshold, $pattern) => preg_match($pattern, $value) === 1);
 
         return $custom ?? $config['default'] ?? 1_000;
     }
