@@ -20,8 +20,8 @@ trait LivewireRoutes
         $path = $route->getDomain().Str::start($route->uri(), '/');
         $via = $route->getActionName();
 
-        if ($route->named('*livewire.update') && $request->has('components.0.snapshot')) {
-            $snapshot = json_decode($request->input('components.0.snapshot'), flags: JSON_THROW_ON_ERROR);
+        if ($route->named('*livewire.update') && ($snapshot = $request->input('components.0.snapshot'))) {
+            $snapshot = json_decode($snapshot, flags: JSON_THROW_ON_ERROR);
 
             if (isset($snapshot->memo->path)) {
                 $via = 'via '.$path;
