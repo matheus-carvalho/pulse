@@ -102,7 +102,7 @@ it('can configure threshold per job', function () {
     expect($entries[0]->key)->toBe('MySlowJob');
     expect($entries[0]->value)->toBe(1_000);
 
-    Pulse::purge();
+    DB::table('pulse_entries')->delete();
 
     Bus::dispatchToQueue(new MySlowJob(2_000));
     Bus::dispatchToQueue(new AnotherSlowJob(2_000));

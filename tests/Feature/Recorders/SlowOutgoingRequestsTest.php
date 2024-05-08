@@ -254,7 +254,7 @@ it('captures requests over the threshold', function () {
     expect($entries[0]->key)->toBe('["GET","one-second-threshold"]');
     expect($entries[0]->value)->toBe(1000);
 
-    Pulse::purge();
+    DB::table('pulse_entries')->delete();
 
     $sleepSeconds = 2;
     Http::get('one-second-threshold')->throw();

@@ -128,7 +128,7 @@ it('can configure thresholds per route', function () {
     expect($entries[0]->key_hash)->toBe(keyHash(json_encode(['GET', '/one-second-threshold', 'Closure'])));
     expect($entries[0]->value)->toBe(1000);
 
-    Pulse::purge();
+    DB::table('pulse_entries')->delete();
 
     $sleepSeconds = 2;
     get('one-second-threshold')->assertOk();
