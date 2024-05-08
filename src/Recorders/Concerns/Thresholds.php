@@ -9,15 +9,15 @@ trait Thresholds
     /**
      * Determine if the duration is under the configured threshold.
      */
-    protected function underThreshold(int|float $duration, string $value): bool
+    protected function underThreshold(int|float $duration, string $key): bool
     {
-        return $duration < $this->threshold($value);
+        return $duration < $this->threshold($key);
     }
 
     /**
-     * Get the threshold for the given value.
+     * Get the threshold for the given key.
      */
-    protected function threshold(string $value, ?string $recorder = null): int
+    protected function threshold(string $key, ?string $recorder = null): int
     {
         $recorder ??= static::class;
 
@@ -30,7 +30,7 @@ trait Thresholds
         // @phpstan-ignore argument.templateType, argument.templateType
         $custom = collect($config)
             ->except(['default'])
-            ->first(fn ($threshold, $pattern) => preg_match($pattern, $value) === 1);
+            ->first(fn ($threshold, $pattern) => preg_match($pattern, $key) === 1);
 
         return $custom ?? $config['default'] ?? 1_000;
     }
