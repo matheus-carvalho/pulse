@@ -108,7 +108,7 @@ it('does not ingest queries under the slow query threshold', function () {
     Pulse::ignore(fn () => expect(DB::table('pulse_entries')->count())->toBe(0));
 });
 
-it('can configure thresholds per query', function () {
+it('can configure threshold per query', function () {
     Config::set('pulse.recorders.'.SlowQueries::class.'.threshold', [
         '#one_second_threshold#' => 1_000,
         '#two_second_threshold#' => 2_000,

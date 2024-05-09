@@ -223,7 +223,7 @@ it('can sample at one', function () {
     expect(Pulse::ingest())->toBe(10);
 });
 
-it('captures requests over the threshold', function () {
+it('can configure threshold per url', function () {
     freezeTime();
     Sleep::fake(syncWithCarbon: true);
     Config::set('pulse.recorders.'.SlowOutgoingRequests::class.'.threshold', [

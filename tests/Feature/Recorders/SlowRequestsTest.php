@@ -100,7 +100,7 @@ it('captures requests over the threshold', function () {
     Pulse::ignore(fn () => expect(DB::table('pulse_values')->count())->toBe(0));
 });
 
-it('can configure thresholds per route', function () {
+it('can configure threshold per route', function () {
     Date::setTestNow('2000-01-02 03:04:05');
     Sleep::fake(syncWithCarbon: true);
     Config::set('pulse.recorders.'.SlowRequests::class.'.threshold', [
